@@ -1,2 +1,2 @@
 Test file
-adding in dev1 branch
+adding in dev1 branches to test the merge option
