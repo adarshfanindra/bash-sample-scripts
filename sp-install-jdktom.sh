@@ -15,23 +15,32 @@ echo "Setting hostname to: $NEW_HOSTNAME"
 sudo hostnamectl set-hostname "$NEW_HOSTNAME"
 
 echo "Updating /etc/hosts..."
-sudo tee /etc/hosts > /dev/null <<EOF
+
+# Ensure localhost entries exist
+sudo grep -q "^127.0.0.1\s\+localhost" /etc/hosts || \
+sudo tee -a /etc/hosts > /dev/null <<EOF
 127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+EOF
+
+sudo grep -q "^::1\s\+localhost" /etc/hosts || \
+sudo tee -a /etc/hosts > /dev/null <<EOF
 ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+EOF
+
+# Add hostname entry if missing
+sudo grep -q "$NEW_HOSTNAME" /etc/hosts || \
+sudo tee -a /etc/hosts > /dev/null <<EOF
 127.0.0.1   $NEW_HOSTNAME
 ::1         $NEW_HOSTNAME
 EOF
 
 #######################################
-# 2. JAVA INSTALLATION (PINNED JDK 21)
+# 2. JAVA INSTALLATION (JDK 21 – EC2 SAFE)
 #######################################
 JAVA_MAJOR=21
-JDK_RPM_VERSION="21.0.2.0.13-2.el9"   # 🔒 PIN THIS VERSION
 
-echo "Installing Java ${JAVA_MAJOR} (${JDK_RPM_VERSION})..."
-sudo dnf install -y \
-  java-${JAVA_MAJOR}-openjdk-${JDK_RPM_VERSION} \
-  java-${JAVA_MAJOR}-openjdk-devel-${JDK_RPM_VERSION}
+echo "Installing Amazon Corretto Java ${JAVA_MAJOR}..."
+sudo dnf install -y java-${JAVA_MAJOR}-amazon-corretto-devel
 
 echo "Configuring JAVA_HOME..."
 sudo tee /etc/profile.d/java.sh <<'EOF'
@@ -86,7 +95,7 @@ java -version
 
 echo ""
 echo "Installed Java RPMs:"
-rpm -qa | grep java-${JAVA_MAJOR}-openjdk || true
+rpm -qa | grep corretto || true
 
 echo ""
 echo "Tomcat process:"
@@ -100,9 +109,7 @@ echo ""
 echo "Setup complete."
 echo "Access Tomcat at: http://<EC2_PUBLIC_IP>:8080"
 
-
-echo "IMPORTANT:IMPORTANT:IMPORTANT:IMPORTANT:IMPORTANT:IMPORTANT:IMPORTANT:
-When this script is executed multiple times on the same system with different
-hostnames, /etc/hosts should be reviewed to confirm that only the intended
-hostname is present. Stale or duplicate hostname entries should be removed to
-avoid name resolution issues."
+echo ""
+echo "NOTE:"
+echo "If this script is run multiple times with different hostnames,"
+echo "review /etc/hosts to ensure only intended hostname entries remain."
