@@ -1,3 +1,11 @@
-Testing for merginf
-345
-6859878
+<powershell>
+# Allow RDP
+New-NetFirewallRule -DisplayName "Allow RDP" -Direction Inbound -LocalPort 3389 -Protocol TCP -Action Allow
+
+# Allow SSH
+New-NetFirewallRule -DisplayName "Allow SSH" -Direction Inbound -LocalPort 22 -Protocol TCP -Action Allow
+
+# Start OpenSSH service
+Set-Service sshd -StartupType Automatic
+Start-Service sshd
+</powershell>
