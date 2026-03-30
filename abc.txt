@@ -1,2 +1,48 @@
-Test file
-adding in dev1 branches to test the merge option
+Step 1 — Access via EC2 Serial Console
+SSH was unavailable due to the boot failure. AWS EC2 Serial Console was used to access the dracut emergency shell.
+Step 2 — Identify Disk Layout
+lsblk
+blkid
+Identified partitions:
+•	nvme0n1p2 — /boot/efi (FAT32, ESP)
+•	nvme0n1p3 — /boot (XFS)
+•	nvme0n1p4 — / root filesystem (XFS, UUID: c1349b5d-2ec4-4d7b-899d-ffde818ea87a)
+Step 3 — Run xfs_repair on Root Partition
+xfs_repair /dev/nvme0n1p4
+Repair completed. Disconnected inodes were moved to /var inside the filesystem.
+Step 4 — Mount Root Filesystem
+mount /dev/nvme0n1p4 /sysroot
+Step 5 — Locate Recovered OS Directories
+find /sysroot -maxdepth 2 -type d
+Found /etc, /usr, /home etc. inside /sysroot/var/ — confirmed all OS files were physically intact.
+Step 6 — Restore Missing Directories
+mkdir /sysroot/etc && cp -a /sysroot/var/etc/. /sysroot/etc/
+mkdir /sysroot/usr && cp -a /sysroot/var/usr/. /sysroot/usr/
+mkdir /sysroot/home && cp -a /sysroot/var/home/. /sysroot/home/
+cp -a /sysroot/var/root/. /sysroot/root/
+mkdir /sysroot/srv /sysroot/mnt /sysroot/media
+Step 7 — Recreate RHEL9 Symlinks
+On RHEL 9, /bin, /sbin, /lib64, /libexec are symlinks to their /usr counterparts:
+ln -s usr/bin /sysroot/bin
+ln -s usr/sbin /sysroot/sbin
+ln -s usr/lib64 /sysroot/lib64
+ln -s usr/libexec /sysroot/libexec
+Step 8 — Mount Boot Partitions and Virtual Filesystems
+mount /dev/nvme0n1p3 /sysroot/boot
+mount /dev/nvme0n1p2 /sysroot/boot/efi
+mount --bind /dev /sysroot/dev
+mount --bind /proc /sysroot/proc
+mount --bind /sys /sysroot/sys
+mount --bind /run /sysroot/run
+Step 9 — Chroot into Recovered OS
+chroot /sysroot /bin/bash
+Verified recovery:
+hostname         # localhost
+df -h            # 16G used / 34G free (32%) — disk NOT full
+cat /etc/redhat-release  # Red Hat Enterprise Linux release 9.7 (Plow)
+Step 10 — Rebuild initramfs and Bootloader
+dracut --force
+grub2-mkconfig -o /boot/grub2/grub.cfg
+Step 11 — Force Reboot
+echo b > /proc/sysrq-trigger
+System rebooted successfully. Login prompt appeared on serial console confirming OS boot success.
