@@ -1,1 +1,19 @@
+[Version]
+Signature="$Windows NT$"
 
+[NewRequest]
+Subject = "CN=EC2AMAZ-0DK6OAE.mbgltest.corp"
+KeyLength = 2048
+KeySpec = 1
+MachineKeySet = TRUE
+Exportable = TRUE
+ProviderName = "Microsoft RSA SChannel Cryptographic Provider"
+RequestType = PKCS10
+
+[Extensions]
+2.5.29.17 = "{text}"
+_continue_ = "dns="SYSTEMNAME.test.corp"
+
+
+#NEXTSTEP
+#certreq -new request.inf request.csr
